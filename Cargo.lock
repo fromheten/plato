@@ -1,0 +1,14 @@
+[[package]]
+name = "plato_runtime"
+version = "0.1.0"
+dependencies = [
+ "rpds 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "rpds"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[metadata]
+"checksum rpds 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "428720c0fe5ca53b63d4cad25c3920b52e69ae634cd07fc7c0ea7e78626f81b9"

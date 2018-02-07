@@ -1,0 +1,7 @@
+[package]
+name = "plato"
+version = "0.1.0"
+authors = ["Martin Josefsson <plato@martinjosefsson.com>"]
+
+[dependencies]
+rpds = "0.3.0"
