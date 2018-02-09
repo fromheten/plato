@@ -310,32 +310,33 @@ fn expression(tokens: &Vec<Token>,
                 }
                 TokenType::Symbol => {
                     match current_collection {
-                        &Some(ref curr_coll) => {
-                            match curr_coll.clone() {
-                                Expression::Vector(rpds_vector) => expression(
-                                    tokens,
-                                    &Some(
-                                        Expression::Vector(
-                                            rpds_vector.push_back(
-                                                Expression::Symbol(current_token.value)
-                                            )
-                                        )
-                                    ),
-                                    &Some(index + 1)),
-                                Expression::Set(rpds_set) => expression(
-                                    tokens,
-                                    &Some(
-                                        Expression::Set(
-                                            rpds_set.insert(
-                                                Expression::Symbol(current_token.value)
-                                            )
-                                        )
-                                    ),
-                                    &Some(index + 1)
-                                ),
-                                _ => panic!("Not done! current expression is {}", curr_coll),
-                            }
-                        }
+                        &Some(ref _curr_coll) => panic!("I think this function arg is not required"),
+                        // {
+                        //     match curr_coll.clone() {
+                        //         Expression::Vector(rpds_vector) => expression(
+                        //             tokens,
+                        //             &Some(
+                        //                 Expression::Vector(
+                        //                     rpds_vector.push_back(
+                        //                         Expression::Symbol(current_token.value)
+                        //                     )
+                        //                 )
+                        //             ),
+                        //             &Some(index + 1)),
+                        //         Expression::Set(rpds_set) => expression(
+                        //             tokens,
+                        //             &Some(
+                        //                 Expression::Set(
+                        //                     rpds_set.insert(
+                        //                         Expression::Symbol(current_token.value)
+                        //                     )
+                        //                 )
+                        //             ),
+                        //             &Some(index + 1)
+                        //         ),
+                        //         _ => panic!("Not done! current expression is {}", curr_coll),
+                        //     }
+                        // }
                         &None => (Expression::Symbol(current_token.value), index),
                     }
                 }
@@ -627,6 +628,41 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
                     } else {
                         return Some(Expression::Bool(false));
                     }
+                } else if first == Expression::Symbol(s("first")) {
+                    return evaluate(vec[1].clone(), context);
+                } else if first == Expression::Symbol(s("rest")) {
+                    let mut to_ret = rpds::Vector::new();
+                    let mut index = 0;
+
+                    println!("yoyo {}",
+                             evaluate(vec[1].clone(), context.clone()).unwrap());
+
+                    match evaluate(vec[1].clone(), context.clone()) {
+                        Some(expr) => {
+                            match expr {
+                                Expression::Vector(rpds_v) => {
+                                    for item in rpds_v.iter() {
+                                        if index > 0 {
+                                            to_ret = to_ret.push_back(item.clone());
+                                        }
+                                        index = index + 1;
+                                    }
+                                }
+                                _ => return None,
+                            }
+                        }
+                        None => return None,
+                    }
+
+                    return Some(Expression::Vector(to_ret));
+                } else if first == Expression::Symbol(s("if")) {
+                    if evaluate(vec[1].clone(), context.clone()).unwrap() ==
+                       Expression::Bool(true) {
+                        return evaluate(vec[2].clone(), context.clone());
+                    } else if evaluate(vec[1].clone(), context.clone()).unwrap() ==
+                              Expression::Bool(false) {
+                        return evaluate(vec[3].clone(), context.clone());
+                    }
                 } else {
                     return None;
                 }
@@ -673,8 +709,75 @@ fn evaluate_equals_tests() {
     eval_test("['equals?' ['quote' 'no'] ['quote' 'yes']]", "{}", "F");
 }
 
+#[test]
+fn evaluate_first_tests() {
+    eval_test("['first' ['quote' 'a']]", "{}", "'a'");
+}
+
+#[test]
+fn evaluate_rest_tests() {
+    eval_test("['rest' ['quote' ['a' 'b' 'c']]]", "{}", "['b' 'c']");
+}
+
+#[test]
+fn evaluate_push_tests() {
+    eval_test("['push' ['quote' 'a'] ['quote' ['b']]]", "{}", "['a' 'b']");
+}
+
+#[test]
+fn evaluate_bool_tests() {
+    eval_test("T", "{}", "T");
+    eval_test("F", "{}", "F");
+}
+
+#[test]
+fn evaluate_if_tests() {
+    eval_test("['if' T ['quote' 'I expect this'] ['quote' 'no']]",
+              "{}",
+              "'I expect this'");
+    eval_test("['if' F ['quote' 'no'] ['quote' 'これの']]",
+              "{}",
+              "'これの'");
+}
+
+#[test]
+fn evaluate_lambda_tests() {
+    eval_test("[['lambda' ['x'] 'x'] ['quote' 'a']]", "{}", "'a'");
+
+}
+
+#[test]
+fn evaluate_lambda_with_multiple_args() {
+    eval_test("[['lambda' ['x' 'y'] ['push' 'x' 'y']] ['quote' 'a'] ['quote' 'b']]",
+              "{}",
+              "['a' 'b']");
+}
+
+#[test]
+fn evaluate_lambda_from_context() {
+    eval_test("['identity' ['quote' 'a']]",
+              "{'identity' ['lambda' ['x'] 'x']}",
+              "'a'");
+}
+
+#[test]
+fn evaluate_higher_order_functions() {
+    eval_test("[['lambda' ['x' 'f'] ['f' 'x']] ['quote' 'a'] ['lambda' ['x'] 'x']]",
+              "{}",
+              "'a'");
+    eval_test("[['Get identity'] ['quote' 'a']]",
+              "{'Get identity' ['lambda' [] ['lambda' ['x'] 'x']]}",
+              "'a'");
+}
+
+#[test]
+fn evaluate_the_id_of_something() {
+    eval_test("['id'['quote''Thank you, Socrates, Plato, Alan Kay, Joe Armstrong, John McCarthy & Paul Graham. A point of view is worth 80 IQ points. ']]",
+              "{}",
+              "plato:0:something")
+}
+
 fn main() {
     println!("{}", expression(&tokenize(&s("{'k' 'v'}")), &None, &None).0);
     println!("Hello, world!");
-
 }
