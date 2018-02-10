@@ -301,45 +301,9 @@ fn expression(tokens: &Vec<Token>,
         &Some(index) => {
             let current_token = tokens[index].clone();
             match current_token.token_type {
-                TokenType::Bool => {
-                    if current_token.value == s("T") {
-                        (Expression::Bool(true), index)
-                    } else {
-                        (Expression::Bool(false), index)
-                    }
-                }
-                TokenType::Symbol => {
-                    match current_collection {
-                        &Some(ref _curr_coll) => panic!("I think this function arg is not required"),
-                        // {
-                        //     match curr_coll.clone() {
-                        //         Expression::Vector(rpds_vector) => expression(
-                        //             tokens,
-                        //             &Some(
-                        //                 Expression::Vector(
-                        //                     rpds_vector.push_back(
-                        //                         Expression::Symbol(current_token.value)
-                        //                     )
-                        //                 )
-                        //             ),
-                        //             &Some(index + 1)),
-                        //         Expression::Set(rpds_set) => expression(
-                        //             tokens,
-                        //             &Some(
-                        //                 Expression::Set(
-                        //                     rpds_set.insert(
-                        //                         Expression::Symbol(current_token.value)
-                        //                     )
-                        //                 )
-                        //             ),
-                        //             &Some(index + 1)
-                        //         ),
-                        //         _ => panic!("Not done! current expression is {}", curr_coll),
-                        //     }
-                        // }
-                        &None => (Expression::Symbol(current_token.value), index),
-                    }
-                }
+                TokenType::Bool => (Expression::Bool(current_token.value == s("T")), index),
+                // TokenType::Bool => (Expression::Bool(current_token.value == s("T")), index),
+                TokenType::Symbol => (Expression::Symbol(current_token.value), index),
                 TokenType::Record => {
                     // check if next token is }
                     // if so just return Expression::Record(rpds::HashTrieMap::new())
@@ -356,7 +320,6 @@ fn expression(tokens: &Vec<Token>,
                     loop {
                         let current_token = tokens[index_at_last_finish].clone();
                         if current_token.value == s("}") {
-                            // index_at_last_finish = index_at_last_finish - 1;
                             break;
                         } else {
                             let (current_expression, new_index) =
@@ -630,13 +593,28 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
                     }
                 } else if first == Expression::Symbol(s("first")) {
                     return evaluate(vec[1].clone(), context);
+                } else if first == Expression::Symbol(s("push")) {
+                    println!("PUSH");
+                    // OK! Time to implement push
+                    // ['push' ['quote' 'x'] ['quote' ['a' 'b' 'c']]]
+                    // => ['a' 'b' 'c' 'x']
+                    fn cons(e1: Expression, e2: Expression) -> Option<Expression> {
+                        match e2 {
+                            Expression::Vector(rpds_v) => {
+                                Some(Expression::Vector(rpds_v.push_back(e1)))
+                            }
+                            _ => None,
+                        }
+                    }
+                    let x = evaluate(vec[1].clone(), context.clone()).unwrap();
+                    let y = evaluate(vec[2].clone(), context.clone()).unwrap();
+                    println!("PUSH {} {}", x, y);
+                    return cons(x, y);
                 } else if first == Expression::Symbol(s("rest")) {
                     let mut to_ret = rpds::Vector::new();
                     let mut index = 0;
-
                     println!("yoyo {}",
                              evaluate(vec[1].clone(), context.clone()).unwrap());
-
                     match evaluate(vec[1].clone(), context.clone()) {
                         Some(expr) => {
                             match expr {
@@ -721,7 +699,7 @@ fn evaluate_rest_tests() {
 
 #[test]
 fn evaluate_push_tests() {
-    eval_test("['push' ['quote' 'a'] ['quote' ['b']]]", "{}", "['a' 'b']");
+    eval_test("['push' ['quote' 'a'] ['quote' ['b']]]", "{}", "['b' 'a']");
 }
 
 #[test]
