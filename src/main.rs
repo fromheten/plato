@@ -50,8 +50,6 @@ fn to_string(expression: Expression) -> String {
             let mut s = String::new();
             s.push_str("{");
             for (k, v) in hashmap.iter() {
-                s.push_str("
-");
                 s.push_str(&to_string(k.clone()));
                 s.push_str(&to_string(v.clone()));
             }
@@ -92,16 +90,14 @@ fn to_string_test() {
                         expression(
                             &tokenize(
                                 &s("['one''two''three']")),
-                            &None,
                             &None
                         ).0)),
-                &None,
                 &None
             ).0
         ),
         s("['one''two''three']"));
 
-    assert_eq!(to_string(expression(&tokenize(&s("['one''two''three']")), &None, &None).0),
+    assert_eq!(to_string(expression(&tokenize(&s("['one''two''three']")), &None).0),
                s("['one''two''three']"));
 }
 
@@ -291,13 +287,10 @@ fn tokenize_set_test() {
                     }])
 }
 
-fn expression(tokens: &Vec<Token>,
-              current_collection: &Option<Expression>,
-              index_option: &Option<usize>)
-              -> (Expression, usize) {
+fn expression(tokens: &Vec<Token>, index_option: &Option<usize>) -> (Expression, usize) {
     // returned usize is the index of tokens at time of returning
     match index_option {
-        &None => expression(tokens, current_collection, &Some(0)),
+        &None => expression(tokens, &Some(0)),
         &Some(index) => {
             let current_token = tokens[index].clone();
             match current_token.token_type {
@@ -323,7 +316,7 @@ fn expression(tokens: &Vec<Token>,
                             break;
                         } else {
                             let (current_expression, new_index) =
-                                expression(tokens, &None, &Some(index_at_last_finish));
+                                expression(tokens, &Some(index_at_last_finish));
 
                             expressions_buffer.push(current_expression.clone());
 
@@ -358,7 +351,7 @@ fn expression(tokens: &Vec<Token>,
                             break;
                         } else {
                             let (current_expression, new_index) =
-                                expression(tokens, &None, &Some(index_at_last_finish));
+                                expression(tokens, &Some(index_at_last_finish));
                             expressions = expressions.push_back(current_expression.clone());
                             index_at_last_finish = new_index + 1;
                         }
@@ -374,7 +367,7 @@ fn expression(tokens: &Vec<Token>,
                             break;
                         } else {
                             let (current_expression, new_index) =
-                                expression(tokens, &None, &Some(index_at_last_finish));
+                                expression(tokens, &Some(index_at_last_finish));
                             expressions = expressions.insert(current_expression.clone());
                             index_at_last_finish = new_index + 1;
                         }
@@ -388,7 +381,7 @@ fn expression(tokens: &Vec<Token>,
 
 #[test]
 fn expression_records_multiple_keyvals() {
-    assert_eq!(expression(&tokenize(&s("{'key1' 'val1' 'key2' 'val2'}")), &None, &None),
+    assert_eq!(expression(&tokenize(&s("{'key1' 'val1' 'key2' 'val2'}")), &None),
                (Expression::Record(rpds::HashTrieMap::new()
                                        .insert(Expression::Symbol(s("key1")),
                                                Expression::Symbol(s("val1")))
@@ -424,7 +417,7 @@ fn expression_nested_records() {
                         value: s("}"),
                         token_type: TokenType::Record,
                     }]);
-    assert_eq!(expression(&tokenize(&s("{{} {}}")), &None, &None),
+    assert_eq!(expression(&tokenize(&s("{{} {}}")), &None),
                (Expression::Record(rpds::HashTrieMap::new()
                                        .insert(Expression::Record(rpds::HashTrieMap::new()),
                                                Expression::Record(rpds::HashTrieMap::new()))),
@@ -434,13 +427,13 @@ fn expression_nested_records() {
 
 #[test]
 fn expression_empty_record() {
-    assert_eq!(expression(&tokenize(&s("{}")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("{}")), &None).0,
                Expression::Record(rpds::HashTrieMap::new()))
 }
 
 #[test]
 fn expression_record_with_symbol_key() {
-    assert_eq!(expression(&tokenize(&s("{'k' 'v'}")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("{'k' 'v'}")), &None).0,
                Expression::Record(rpds::HashTrieMap::new().insert(Expression::Symbol(s("k")),
                                                                   Expression::Symbol(s("v")))))
 }
@@ -448,7 +441,7 @@ fn expression_record_with_symbol_key() {
 #[test]
 fn expression_record_with_key_val() {
     assert_eq!(
-        expression(&tokenize(&s("{['quote' 'my key'] ['quote' 'value']}")), &None, &None).0,
+        expression(&tokenize(&s("{['quote' 'my key'] ['quote' 'value']}")), &None).0,
         Expression::Record(
             rpds::HashTrieMap::new().insert(
                 Expression::Vector(
@@ -474,13 +467,13 @@ fn expression_record_with_key_val() {
 
 #[test]
 fn expression_set() {
-    assert_eq!(expression(&tokenize(&s("<>")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("<>")), &None).0,
                Expression::Set(rpds::HashTrieSet::new()))
 }
 
 #[test]
 fn expression_set_of_symbols() {
-    assert_eq!(expression(&tokenize(&s("<'one' 'two' 'one'>")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("<'one' 'two' 'one'>")), &None).0,
                Expression::Set(rpds::HashTrieSet::new()
                                    .insert(Expression::Symbol(s("one")))
                                    .insert(Expression::Symbol(s("two")))))
@@ -488,7 +481,7 @@ fn expression_set_of_symbols() {
 
 #[test]
 fn expression_nested_set() {
-    assert_eq!(expression(&tokenize(&s("<'ett''två''tre'<'一''二'>>")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("<'ett''två''tre'<'一''二'>>")), &None).0,
                Expression::Set(rpds::HashTrieSet::new()
                                .insert(Expression::Symbol(s("ett")))
                                .insert(Expression::Symbol(s("två")))
@@ -500,20 +493,20 @@ fn expression_nested_set() {
 
 #[test]
 fn expression_double_vector() {
-    assert_eq!(expression(&tokenize(&s("[[]]")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("[[]]")), &None).0,
                Expression::Vector(rpds::Vector::new()
                                       .push_back(Expression::Vector(rpds::Vector::new()))))
 }
 
 #[test]
 fn expression_symbol_token_test() {
-    assert_eq!(expression(&tokenize(&s("'symbol'")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("'symbol'")), &None).0,
                Expression::Symbol(String::from("symbol")))
 }
 
 #[test]
 fn expression_empty_vector_test() {
-    assert_eq!(expression(&tokenize(&s("[]")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("[]")), &None).0,
                Expression::Vector(rpds::Vector::new()))
 }
 
@@ -521,7 +514,7 @@ fn expression_empty_vector_test() {
 fn expression_vector_of_symbols_test() {
     println!("tokenize(s(\"['one' 'two']\")) => {:?}",
              tokenize(&s("['one' 'two']")));
-    assert_eq!(expression(&tokenize(&s("['one' 'two']")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("['one' 'two']")), &None).0,
                Expression::Vector(rpds::Vector::new()
                                       .push_back(Expression::Symbol(String::from("one")))
                                       .push_back(Expression::Symbol(String::from("two")))))
@@ -529,7 +522,7 @@ fn expression_vector_of_symbols_test() {
 
 #[test]
 fn expression_nested_vector_of_symbols_test() {
-    assert_eq!(expression(&tokenize(&s("['one' 'two' ['一' '二' ['三']]]")), &None, &None).0,
+    assert_eq!(expression(&tokenize(&s("['one' 'two' ['一' '二' ['三']]]")), &None).0,
                Expression::Vector(
                    rpds::Vector::new()
                        .push_back(Expression::Symbol(String::from("one")))
@@ -549,7 +542,7 @@ fn expression_nested_vector_of_symbols_test() {
 #[test]
 fn expression_one_two_many_tests() {
     assert_eq!(
-        expression(&tokenize(&s("['equals?' ['quote' 'yes'] ['quote' 'yes']]")), &None, &None).0,
+        expression(&tokenize(&s("['equals?' ['quote' 'yes'] ['quote' 'yes']]")), &None).0,
         Expression::Vector(rpds::Vector::new()
                            .push_back(Expression::Symbol(s("equals?")))
                            .push_back(Expression::Vector(rpds::Vector::new()
@@ -561,15 +554,26 @@ fn expression_one_two_many_tests() {
     )
 }
 
-fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
-    let ctx: rpds::HashTrieMap<Expression, Expression> = match context {
-        Expression::Record(ref r) => r.clone(),
-        _ => panic!("Context must be Record"),
-    };
-    println!("Beginning evaluate");
+fn type_of(expression: &Expression) -> &str {
+    match expression {
+        &Expression::Vector(_) => "Vector",
+        &Expression::Record(_) => "Record",
+        &Expression::Set(_) => "Set",
+        &Expression::Symbol(_) => "Symbol",
+        &Expression::Bool(_) => "Bool",
+    }
+}
+
+fn evaluate(expression_given: Expression, context_given: Expression) -> Option<Expression> {
+    let mut expression: Expression = expression_given.clone();
+    let mut context: Expression = context_given.clone();
     loop {
         match expression.clone() {
             Expression::Symbol(_string) => {
+                let ctx: rpds::HashTrieMap<Expression, Expression> = match context {
+                    Expression::Record(ref r) => r.clone(),
+                    _ => panic!("Context must be Record"),
+                };
                 match ctx.get(&expression) {
                     Some(e) => return Some(e.clone()),
                     None => return None,
@@ -585,7 +589,6 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
                                     _ => Expression::Bool(false),
                                 });
                 } else if first == Expression::Symbol(s("equals?")) {
-                    println!("vec is {}", vec);
                     if vec[1] == vec[2] {
                         return Some(Expression::Bool(true));
                     } else {
@@ -594,45 +597,29 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
                 } else if first == Expression::Symbol(s("first")) {
                     return evaluate(vec[1].clone(), context);
                 } else if first == Expression::Symbol(s("push")) {
-                    println!("PUSH");
                     // OK! Time to implement push
                     // ['push' ['quote' 'x'] ['quote' ['a' 'b' 'c']]]
                     // => ['a' 'b' 'c' 'x']
-                    fn cons(e1: Expression, e2: Expression) -> Option<Expression> {
+                    fn push(e1: Expression, e2: Expression) -> Result<Expression, String> {
                         match e2 {
                             Expression::Vector(rpds_v) => {
-                                Some(Expression::Vector(rpds_v.push_back(e1)))
+                                Ok(Expression::Vector(rpds_v.push_back(e1)))
                             }
-                            _ => None,
+                            _ => {
+                                Err(format!("e2 is not a vector, it is {}. e2: {}",
+                                            type_of(&e2),
+                                            &e2))
+                            }
                         }
                     }
                     let x = evaluate(vec[1].clone(), context.clone()).unwrap();
                     let y = evaluate(vec[2].clone(), context.clone()).unwrap();
-                    println!("PUSH {} {}", x, y);
-                    return cons(x, y);
+                    return match push(x, y) {
+                               Ok(val) => Some(val),
+                               Err(error) => panic!(error),
+                           };
                 } else if first == Expression::Symbol(s("rest")) {
-                    let mut to_ret = rpds::Vector::new();
-                    let mut index = 0;
-                    println!("yoyo {}",
-                             evaluate(vec[1].clone(), context.clone()).unwrap());
-                    match evaluate(vec[1].clone(), context.clone()) {
-                        Some(expr) => {
-                            match expr {
-                                Expression::Vector(rpds_v) => {
-                                    for item in rpds_v.iter() {
-                                        if index > 0 {
-                                            to_ret = to_ret.push_back(item.clone());
-                                        }
-                                        index = index + 1;
-                                    }
-                                }
-                                _ => return None,
-                            }
-                        }
-                        None => return None,
-                    }
-
-                    return Some(Expression::Vector(to_ret));
+                    return Some(rest(expression, context).unwrap());
                 } else if first == Expression::Symbol(s("if")) {
                     if evaluate(vec[1].clone(), context.clone()).unwrap() ==
                        Expression::Bool(true) {
@@ -641,8 +628,22 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
                               Expression::Bool(false) {
                         return evaluate(vec[3].clone(), context.clone());
                     }
+                } else if first == Expression::Symbol(s("lambda")) {
+                    return Some(expression);
                 } else {
-                    return None;
+                    // map evaluate over expression (vec)
+                    let new_expression: Expression =
+                        Expression::Vector(vec.iter()
+                                               .map(|e| {
+                                                        evaluate(e.clone(), context.clone())
+                                                            .unwrap()
+                                                    })
+                                               .collect::<rpds::Vector<Expression>>());
+                    expression = lambda_body(&new_expression).unwrap();
+                    context = zipmap(lambda_args(&new_expression).unwrap(),
+                                     given_arguments(&new_expression).unwrap())
+                            .unwrap();
+                    continue;
                 }
             }
             Expression::Record(_rpds_hashtriemap) => panic!("l8r losers!"),
@@ -652,13 +653,101 @@ fn evaluate(expression: Expression, context: Expression) -> Option<Expression> {
     }
 }
 
+fn given_arguments(lambda_call_expression: &Expression) -> Result<Expression, String> {
+    rest_no_evaluate(lambda_call_expression.clone())
+}
+
+fn lambda_args(lambda_call_expression: &Expression) -> Result<Expression, String> {
+    Ok(nth_vector(nth_vector(lambda_call_expression.clone(), 0).unwrap(), 1).unwrap())
+}
+
+fn lambda_body(lambda_call_expression: &Expression) -> Result<Expression, String> {
+    Ok(nth_vector(nth_vector(lambda_call_expression.clone(), 0).unwrap(), 2).unwrap())
+}
+
+fn rest_no_evaluate(e: Expression) -> Result<Expression, String> {
+    match e {
+        Expression::Vector(vector) => {
+            let mut to_ret = rpds::Vector::new();
+            let mut index = 0;
+            for item in vector.iter() {
+                if index > 0 {
+                    to_ret = to_ret.push_back(item.clone());
+                }
+                index = index + 1;
+            }
+            Ok(Expression::Vector(to_ret))
+        }
+        _ => Err(format!("Not a vector, e={}", e)),
+    }
+}
+
+fn rest(e: Expression, context: Expression) -> Result<Expression, String> {
+    match e {
+        Expression::Vector(vec) => {
+            let mut to_ret = rpds::Vector::new();
+            let mut index = 0;
+            match evaluate(vec[1].clone(), context.clone()) {
+                Some(expr) => {
+                    match expr {
+                        Expression::Vector(rpds_v) => {
+                            for item in rpds_v.iter() {
+                                if index > 0 {
+                                    to_ret = to_ret.push_back(item.clone());
+                                }
+                                index = index + 1;
+                            }
+                        }
+                        _ => panic!("rest inner {}", expr),
+                    }
+                }
+                None => panic!("rest outer {}", vec[1].clone()),
+            }
+            return Ok(Expression::Vector(to_ret));
+        }
+        _ => Err(format!("Not a vector, e={}", e)),
+    }
+}
+
+fn zipmap(vec0: Expression, vec1: Expression) -> Result<Expression, String> {
+    match vec0 {
+        Expression::Vector(r_vec0) => {
+            match vec1 {
+                Expression::Vector(r_vec1) => {
+                    assert_eq!(r_vec0.len(),
+                               r_vec1.len(),
+                               "vec0.len() != vec1.len(), {}, {}",
+                               r_vec0.len(),
+                               r_vec1.len());
+                    let mut index: usize = 0;
+                    let mut to_ret = rpds::HashTrieMap::new();
+                    for key in r_vec0.iter() {
+                        to_ret = to_ret.insert(key.clone(), r_vec1[index].clone());
+                        index = index + 1;
+                    }
+                    return Ok(Expression::Record(to_ret));
+                }
+                _ => Err(format!("Not a Vector (1): {}", vec1)),
+            }
+        }
+        _ => Err(format!("Not a Vector (0): {}", vec0)),
+    }
+}
+
+fn nth_vector(e: Expression, n: usize) -> Result<Expression, String> {
+    match e {
+        Expression::Vector(rpds_v) => Ok(rpds_v[n].clone()),
+        _ => Err(format!("Not a vector, e = {}", e)),
+    }
+}
+
 fn eval_test(source_str: &str, context_source: &str, expectation: &str) {
     println!("Expression is: {}",
-             expression(&tokenize(&s(source_str)), &None, &None).0);
-    assert_eq!(evaluate(expression(&tokenize(&s(source_str)), &None, &None).0,
-                        expression(&tokenize(&s(context_source)), &None, &None).0)
+             expression(&tokenize(&s(source_str)), &None).0);
+    assert_eq!(evaluate(expression(&tokenize(&s(source_str)), &None).0,
+                        expression(&tokenize(&s(context_source)), &None).0)
                        .unwrap(),
-               expression(&tokenize(&s(expectation)), &None, &None).0);
+               expression(&tokenize(&s(expectation)), &None).0);
 }
 
 #[test]
@@ -719,6 +808,11 @@ fn evaluate_if_tests() {
 }
 
 #[test]
+fn evaluate_lonely_lambda() {
+    eval_test("['lambda' [''] '']", "{}", "['lambda' [''] '']");
+}
+
+#[test]
 fn evaluate_lambda_tests() {
     eval_test("[['lambda' ['x'] 'x'] ['quote' 'a']]", "{}", "'a'");
 
@@ -726,9 +820,9 @@ fn evaluate_lambda_tests() {
 
 #[test]
 fn evaluate_lambda_with_multiple_args() {
-    eval_test("[['lambda' ['x' 'y'] ['push' 'x' 'y']] ['quote' 'a'] ['quote' 'b']]",
+    eval_test("[['lambda' ['x' 'y'] ['push' 'x' 'y']] ['quote' 'a'] ['quote' ['b']]]",
               "{}",
-              "['a' 'b']");
+              "['b''a']")
 }
 
 #[test]
@@ -756,6 +850,6 @@ fn evaluate_the_id_of_something() {
 }
 
 fn main() {
-    println!("{}", expression(&tokenize(&s("{'k' 'v'}")), &None, &None).0);
+    println!("{}", expression(&tokenize(&s("{'k' 'v'}")), &None).0);
     println!("Hello, world!");
 }

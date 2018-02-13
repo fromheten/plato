@@ -12,7 +12,7 @@ This means you can be free to treat the entire Earth - nay, the entire universe 
 ## TODO
 
 - [x] Read and write expressions into a text language (from which the ID will later be derived)
-- [ ] Evaluate an expression
+- [x] Evaluate an expression
 - [ ] Type check an expression (or the functions in it)
 - [ ] Create the runtime that can do effects when given commands
 
