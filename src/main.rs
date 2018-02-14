@@ -1,5 +1,10 @@
 extern crate rpds;
 
+extern crate sha3;
+use sha3::Digest;
+
+extern crate base64;
+
 #[derive(Eq, PartialEq, Clone)]
 #[allow(dead_code)]
 enum Expression {
@@ -630,6 +635,8 @@ fn evaluate(expression_given: Expression, context_given: Expression) -> Option<E
                     }
                 } else if first == Expression::Symbol(s("lambda")) {
                     return Some(expression);
+                } else if first == Expression::Symbol(s("id")) {
+                    return Some(Expression::Symbol(id(&vec[1])))
                 } else {
                     // map evaluate over expression (vec)
                     let new_expression: Expression =
@@ -844,9 +851,16 @@ fn evaluate_higher_order_functions() {
 
 #[test]
 fn evaluate_the_id_of_something() {
-    eval_test("['id'['quote''Thank you, Socrates, Plato, Alan Kay, Joe Armstrong, John McCarthy & Paul Graham. A point of view is worth 80 IQ points. ']]",
+    eval_test("['id' [ 'quote' 'Thank you, Socrates, Plato, Alan Kay, Joe Armstrong, John McCarthy & Paul Graham. A point of view is worth 80 IQ points. ' ]]",
               "{}",
-              "plato:0:something")
+              "'plato:0:aPDaIA9P8EyGZ5YpQPGavzZJpSDpBnWR0zNfy-QGwEY'")
+}
+ 
+fn id(expression: &Expression) -> String {
+    let mut hasher = sha3::Sha3_256::default();
+    hasher.input(to_string(expression.clone()).as_bytes());
+    let b64 = base64::encode_config(&hasher.result(), base64::URL_SAFE_NO_PAD);
+    format!("plato:0:{}", b64)
 }
 
 fn main() {
